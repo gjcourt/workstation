@@ -16,7 +16,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Tools
-        run: brew install shellcheck ruff
+        run: brew install shellcheck ruff tmux
       - name: Lint
         run: make lint
       - name: Brewfiles parse
@@ -26,5 +26,7 @@ jobs:
           done
       - name: Install into a throwaway HOME
         run: make test
+      # `bash -s --` is how flags reach a script read from stdin
+      # (`curl … | bash -s -- --dry-run`); a bare `bash --dry-run` is an error.
       - name: install.sh --dry-run from a pipe (the quick-start path)
-        run: WORKSTATION_DIR="$RUNNER_TEMP/ws" /bin/bash < install.sh --dry-run
+        run: WORKSTATION_DIR="$RUNNER_TEMP/ws" /bin/bash -s -- --dry-run < install.sh

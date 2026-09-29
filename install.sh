@@ -25,6 +25,10 @@ WORKSTATION_DIR="${WORKSTATION_DIR:-$HOME/src/workstation}"
 # --- options -----------------------------------------------------------------
 
 DRY_RUN=0 BREW=1 EXTRAS=0 MACOS=0
+# The recognised flags, re-passed when the curl-piped copy re-runs itself from
+# the checkout (step 2). A plain string, not an array: bash 3.2 + `set -u`
+# treats an empty "${arr[@]}" as unbound. Flags never contain spaces.
+FLAGS=""
 
 usage() {
   cat <<'EOF'
@@ -46,6 +50,7 @@ while [ $# -gt 0 ]; do
     -h | --help) usage; exit 0 ;;
     *) usage >&2; exit 2 ;;
   esac
+  FLAGS="$FLAGS $1"
   shift
 done
 
@@ -93,21 +98,35 @@ ensure_checkout() {
   ensure_clt
   if [ -d "$WORKSTATION_DIR/.git" ]; then
     say "Updating $WORKSTATION_DIR"
-    run git -C "$WORKSTATION_DIR" pull --ff-only
+    # Not fatal: a checkout with local work, or on no branch, is used as it is.
+    run git -C "$WORKSTATION_DIR" pull --ff-only || warn "couldn't fast-forward $WORKSTATION_DIR; using it as is"
   else
     say "Cloning $REPO_URL to $WORKSTATION_DIR"
     run mkdir -p "$(dirname "$WORKSTATION_DIR")"
     run git clone "$REPO_URL" "$WORKSTATION_DIR"
   fi
   [ "$DRY_RUN" -eq 1 ] && { say "dry-run: would continue from $WORKSTATION_DIR/install.sh"; exit 0; }
-  # Re-run from the checkout so every later step uses the repo's own files.
-  exec /bin/bash "$WORKSTATION_DIR/install.sh" "$@"
+  # Re-run from the checkout so every later step uses the repo's own files,
+  # with the same flags ($FLAGS is unquoted on purpose: one word per flag).
+  #
+  # Under `curl | bash` stdin is the pipe the script arrived on, so anything
+  # that reads stdin (the Homebrew installer's sudo prompt and "Press RETURN")
+  # would read the rest of this script instead of the keyboard. Reattach stdin
+  # to the terminal when there is one; with none (CI), Homebrew sees no TTY and
+  # runs non-interactively by itself.
+  if (exec </dev/tty) 2>/dev/null; then
+    # shellcheck disable=SC2086
+    exec /bin/bash "$WORKSTATION_DIR/install.sh" $FLAGS </dev/tty
+  fi
+  # shellcheck disable=SC2086
+  exec /bin/bash "$WORKSTATION_DIR/install.sh" $FLAGS
 }
 
 # --- 3. Homebrew -------------------------------------------------------------
 
 ensure_brew() {
   if ! command -v brew >/dev/null 2>&1; then
+    # Installed but not on PATH (this shell predates it): Apple Silicon, then Intel.
     for b in /opt/homebrew/bin/brew /usr/local/bin/brew; do
       [ -x "$b" ] && eval "$("$b" shellenv)" && break
     done
@@ -118,16 +137,22 @@ ensure_brew() {
       run /bin/bash -c "curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh | bash"
       return
     fi
-    NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+    # Interactive on purpose: a fresh Mac has no cached sudo, and the installer
+    # must ask for the password (NONINTERACTIVE=1 would make it fail instead).
+    # Without a TTY (CI) it switches to non-interactive mode on its own.
+    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+    # A fresh install isn't on PATH yet: load it the same way zsh/zprofile does.
     for b in /opt/homebrew/bin/brew /usr/local/bin/brew; do
       [ -x "$b" ] && eval "$("$b" shellenv)" && break
     done
   fi
+  # --no-upgrade: install what's missing; don't upgrade what's already there
+  # (that's `brew upgrade`'s job, when you choose to run it).
   say "brew bundle (Brewfile)"
-  run brew bundle --no-upgrade --file="$WORKSTATION_DIR/Brewfile"
+  run brew bundle install --no-upgrade --file="$WORKSTATION_DIR/Brewfile"
   if [ "$EXTRAS" -eq 1 ]; then
     say "brew bundle (Brewfile.extras)"
-    run brew bundle --no-upgrade --file="$WORKSTATION_DIR/Brewfile.extras"
+    run brew bundle install --no-upgrade --file="$WORKSTATION_DIR/Brewfile.extras"
   fi
 }
 
@@ -147,7 +172,9 @@ tmux/tmux.conf:.tmux.conf
 ssh/config:.ssh/config
 "
 
-BACKUP_DIR="$HOME/.workstation-backup/$(date +%Y%m%d-%H%M%S)"
+# One directory per run. The PID suffix keeps two runs in the same second from
+# sharing (and overwriting) a backup directory.
+BACKUP_DIR="$HOME/.workstation-backup/$(date +%Y%m%d-%H%M%S)-$$"
 
 # link SRC TARGET — make $HOME/TARGET a symlink to $WORKSTATION_DIR/SRC.
 link() {
@@ -156,6 +183,8 @@ link() {
   if [ -L "$dst" ] && [ "$(readlink "$dst")" = "$src" ]; then
     return # already linked
   fi
+  # Anything else at the target — a file, a directory, or a symlink to
+  # somewhere else (e.g. an old dotfiles repo) — is moved aside, not deleted.
   run mkdir -p "$(dirname "$dst")"
   if [ -e "$dst" ] || [ -L "$dst" ]; then
     case "$2" in
@@ -163,6 +192,7 @@ link() {
       .ssh/config)
         if [ -e "$HOME/.ssh/config.local" ]; then
           run mkdir -p "$BACKUP_DIR/.ssh" && run mv "$dst" "$BACKUP_DIR/.ssh/config"
+          say "Backed up ~/.ssh/config to $BACKUP_DIR/.ssh/config"
         else
           say "Keeping your existing ~/.ssh/config as ~/.ssh/config.local"
           run mv "$dst" "$HOME/.ssh/config.local"
@@ -206,7 +236,9 @@ make_locals() {
   touch_local "$HOME/.zshrc.local" "# Machine-specific zsh config (not in git): hosts, work env, extra PATH.
 # Secrets don't go here — see 'secrets' in the workstation README."
 
-  # Carry git identity over from an existing config when there is one.
+  # Carry git identity over from an existing config when there is one. This
+  # runs before link_all, so on a first install ~/.gitconfig is still the old
+  # file; --includes also finds an identity kept in a file it includes.
   name="$(git config --global --includes user.name 2>/dev/null || true)"
   email="$(git config --global --includes user.email 2>/dev/null || true)"
   touch_local "$HOME/.gitconfig.local" "# Machine-specific git config (not in git): identity, signing.
@@ -219,14 +251,15 @@ make_locals() {
   if [ -L "$HOME/.ssh/config" ] || [ ! -e "$HOME/.ssh/config" ]; then
     touch_local "$HOME/.ssh/config.local" "# Machine-specific ssh hosts (not in git). Keys stay in ~/.ssh, never in the repo."
   fi
-  [ "$DRY_RUN" -eq 1 ] || chmod 700 "$HOME/.ssh"
+  # ssh refuses keys in a group/world-readable ~/.ssh; mkdir may have made it 755.
+  [ "$DRY_RUN" -eq 1 ] || { mkdir -p "$HOME/.ssh" && chmod 700 "$HOME/.ssh"; }
 }
 
 # --- main --------------------------------------------------------------------
 
 [ "$(uname -s)" = "Darwin" ] || { warn "this installer targets macOS"; exit 1; }
 
-ensure_checkout "$@"
+ensure_checkout
 say "Using $WORKSTATION_DIR"
 [ "$BREW" -eq 1 ] && ensure_brew
 make_locals # before linking: git/config includes ~/.gitconfig.local

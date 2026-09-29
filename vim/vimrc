@@ -1,6 +1,8 @@
-" ~/.vimrc (symlinked from workstation/vim/vimrc).
-" Carried over from the old dotfiles repo. Machine-specific additions go in
-" ~/.vimrc.local, sourced at the end of this file.
+" ~/.vimrc (symlinked from workstation/vim/vimrc). Read by every vim start.
+" Carried over from the old dotfiles repo. Settings for plugins (NERDTree,
+" Command-T, ZoomWin, syntastic, gist-vim, vimclojure) are harmless when the
+" plugin isn't installed. Machine-specific additions go in ~/.vimrc.local,
+" sourced near the end of this file.
 
 set nocompatible
 
@@ -12,7 +14,6 @@ syntax on
 set encoding=utf-8
 
 " Whitespace stuff
-set ls=3
 set nowrap
 set tabstop=4
 set shiftwidth=4
@@ -33,7 +34,7 @@ set guifont=Monaco\ 14
 set wildmode=list:longest,list:full
 set wildignore+=*.o,*.obj,.git,*.rbc,*.class,.svn,vendor/gems/*
 
-" Status bar
+" Status bar: always shown
 set laststatus=2
 
 " Without setting this, ZoomWin restores windows in a way that causes
@@ -135,7 +136,11 @@ set modelines=10
 " Default color scheme
 " color ir_black
 
-" Directories for swp files
+" Directories for swp files, created if missing (otherwise vim can't write a
+" swap file and warns E303 on every file it opens).
+if !isdirectory(expand("~/.vim/backup"))
+  call mkdir(expand("~/.vim/backup"), "p", 0700)
+endif
 set backupdir=~/.vim/backup
 set directory=~/.vim/backup
 

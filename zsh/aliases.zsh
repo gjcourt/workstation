@@ -1,4 +1,4 @@
-# aliases.zsh — short names for things typed all day.
+# aliases.zsh — short names for things typed all day. Sourced from zshrc.
 
 # Navigation / listing
 alias ..='cd ..'

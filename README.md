@@ -19,9 +19,9 @@ $ ~/src/workstation/install.sh --no-brew
 ==> Created ~/.gitconfig.local
 ==> Created ~/.ssh/config.local
 ==> Linking configs into ~
-==> Backed up ~/.zshrc to ~/.workstation-backup/20260929-085533/.zshrc
+==> Backed up ~/.zshrc to ~/.workstation-backup/20260929-090228-12802/.zshrc
 ==> Done. Open a new terminal (or: exec zsh -l).
-==> Replaced files are in ~/.workstation-backup/20260929-085533
+==> Replaced files are in ~/.workstation-backup/20260929-090228-12802
 ```
 
 ## Quick start
@@ -41,6 +41,11 @@ $EDITOR ~/.gitconfig.local                     # your name and email
 ```
 
 `install.sh --help` lists the options; `--dry-run` shows what would change.
+Options go after `bash -s --` when piping, e.g. configs only, no Homebrew:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/gjcourt/workstation/main/install.sh | bash -s -- --no-brew
+```
 
 ## Layout
 

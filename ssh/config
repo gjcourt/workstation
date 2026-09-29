@@ -5,6 +5,10 @@
 
 Include ~/.ssh/config.local
 
+# UseKeychain is Apple's ssh only; this stops a Homebrew openssh (or ssh on
+# another OS) from rejecting the whole file over it.
+IgnoreUnknown UseKeychain
+
 Host *
 	AddKeysToAgent yes            # load a key into the agent on first use
 	UseKeychain yes               # keep passphrases in the macOS keychain

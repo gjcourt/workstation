@@ -7,5 +7,12 @@ export VISUAL=vim
 export LANG="${LANG:-en_US.UTF-8}"
 export PYTHONDONTWRITEBYTECODE=1   # no __pycache__ litter in repos
 
-# Where this repo lives, for the files that source their siblings.
-export WORKSTATION_DIR="${WORKSTATION_DIR:-$HOME/src/workstation}"
+# Where this repo lives, for the files that source their siblings. Found by
+# following the ~/.zshenv symlink back to the checkout (%x = this file, :A =
+# resolve symlinks, :h:h = up from zsh/zshenv to the repo), so a checkout
+# anywhere works; falls back to the default location if that doesn't pan out.
+if [[ -z "${WORKSTATION_DIR:-}" ]]; then
+  WORKSTATION_DIR="${${(%):-%x}:A:h:h}"
+  [[ -f "$WORKSTATION_DIR/zsh/zshrc" ]] || WORKSTATION_DIR="$HOME/src/workstation"
+fi
+export WORKSTATION_DIR

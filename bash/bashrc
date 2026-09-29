@@ -1,5 +1,6 @@
-# ~/.bashrc — interactive bash. A deliberately small mirror of the zsh setup:
-# same PATH, same prompt, same everyday aliases. zsh is the primary shell.
+# ~/.bashrc — interactive bash (and, via bash_profile, bash login shells).
+# A deliberately small mirror of the zsh setup: same PATH, same prompt, same
+# everyday aliases. zsh is the primary shell.
 
 # Non-interactive shells: nothing to do.
 case $- in *i*) ;; *) return ;; esac
