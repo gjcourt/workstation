@@ -1,0 +1,11 @@
+# ~/.zshenv — read by EVERY zsh, including scripts and non-interactive
+# commands. Keep it tiny and side-effect free: environment only, no output,
+# nothing slow. PATH lives in zprofile/path.zsh; interactive setup in zshrc.
+
+export EDITOR=vim
+export VISUAL=vim
+export LANG="${LANG:-en_US.UTF-8}"
+export PYTHONDONTWRITEBYTECODE=1   # no __pycache__ litter in repos
+
+# Where this repo lives, for the files that source their siblings.
+export WORKSTATION_DIR="${WORKSTATION_DIR:-$HOME/src/workstation}"

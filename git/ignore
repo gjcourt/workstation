@@ -1,0 +1,15 @@
+# ~/.config/git/ignore — excluded in every repo, without touching the repo's
+# own .gitignore. Personal tooling and OS cruft only; anything a project itself
+# produces belongs in that project's .gitignore.
+
+# macOS
+.DS_Store
+
+# Editors
+*.swp
+*~
+
+# Personal tooling that writes into repos
+.gstack/
+.worktrees/
+.review-drafts/

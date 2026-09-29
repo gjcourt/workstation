@@ -1,0 +1,53 @@
+# ~/.gitconfig (symlinked from workstation/git/config).
+# Identity and anything machine-specific live in ~/.gitconfig.local, created by
+# install.sh and included at the end so it can override anything above.
+
+[core]
+	autocrlf = input          # normalise CRLF to LF on commit; never convert on checkout
+	# Global ignores: ~/.config/git/ignore (git's default path; see git/ignore).
+
+[init]
+	defaultBranch = main
+
+[color]
+	ui = auto
+
+[pull]
+	ff = only                 # never create surprise merge commits on pull
+
+[push]
+	default = current         # push the current branch to a same-named remote branch
+	autoSetupRemote = true    # first push sets upstream; no -u needed
+
+[fetch]
+	prune = true              # drop remote-tracking branches deleted upstream
+
+[rebase]
+	autoStash = true
+
+[diff]
+	algorithm = histogram
+
+[alias]
+	s   = status
+	b   = branch --sort=-committerdate          # most recently used first
+	ds  = diff --staged
+	lg  = log --oneline --graph --decorate -20
+	dm  = diff master
+	dms = diff master --stat
+	fr  = !git fetch origin master && git rebase master
+	fru = !git fetch upstream && git pull --rebase upstream master
+	cmp = !git checkout master && git pull
+	# Rebase onto the latest default branch, whatever it's called.
+	up  = "!f() { d=$(git symbolic-ref --short refs/remotes/origin/HEAD | sed 's@^origin/@@'); git fetch origin \"$d\" && git rebase \"origin/$d\"; }; f"
+
+# GitHub over HTTPS authenticates through the gh CLI (`gh auth login`).
+[credential "https://github.com"]
+	helper =
+	helper = !gh auth git-credential
+[credential "https://gist.github.com"]
+	helper =
+	helper = !gh auth git-credential
+
+[include]
+	path = ~/.gitconfig.local

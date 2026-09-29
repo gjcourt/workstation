@@ -1,0 +1,11 @@
+# ~/.ssh/config (symlinked from workstation/ssh/config).
+# Host entries — names, IPs, users — are personal and live in
+# ~/.ssh/config.local, which install.sh creates (or fills from an existing
+# config). Keys stay in ~/.ssh and never enter the repo.
+
+Include ~/.ssh/config.local
+
+Host *
+	AddKeysToAgent yes            # load a key into the agent on first use
+	UseKeychain yes               # keep passphrases in the macOS keychain
+	ServerAliveInterval 60        # keep idle sessions from being dropped
