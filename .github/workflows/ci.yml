@@ -14,7 +14,9 @@ jobs:
   lint-and-test:
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false   # nothing here pushes; don't leave a token in .git/config
       - name: Tools
         run: brew install shellcheck ruff tmux
       - name: Lint

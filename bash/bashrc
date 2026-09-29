@@ -2,9 +2,6 @@
 # A deliberately small mirror of the zsh setup: same PATH, same prompt, same
 # everyday aliases. zsh is the primary shell.
 
-# Non-interactive shells: nothing to do.
-case $- in *i*) ;; *) return ;; esac
-
 export EDITOR=vim VISUAL=vim
 export WORKSTATION_DIR="${WORKSTATION_DIR:-$HOME/src/workstation}"
 
@@ -19,6 +16,10 @@ for d in "$HOME/.foundry/bin" "${KREW_ROOT:-$HOME/.krew}/bin" "$HOME/go/bin" \
   case ":$PATH:" in *":$d:"*) ;; *) [ -d "$d" ] && PATH="$d:$PATH" ;; esac
 done
 export PATH GOPATH="$HOME/go"
+
+# Everything above is environment, wanted by `bash -l -c …` too. The rest is
+# for interactive shells only.
+case $- in *i*) ;; *) return ;; esac
 
 # Prompt — same look as zsh/prompt.zsh: blue dir, green branch, purple $.
 __git_branch() {
