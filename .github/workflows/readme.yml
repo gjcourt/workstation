@@ -1,0 +1,15 @@
+# README structure check — gjcourt/.github README-STANDARD.md.
+name: README
+on:
+  pull_request:
+    paths: [README.md]
+  push:
+    branches: [main]
+    paths: [README.md]
+
+permissions:
+  contents: read
+
+jobs:
+  readme:
+    uses: gjcourt/.github/.github/workflows/readme-check.yml@main
