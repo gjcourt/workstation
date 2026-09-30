@@ -1,0 +1,61 @@
+# ~/.gitconfig (symlinked from workstation/git/config).
+# Identity and anything machine-specific live in ~/.gitconfig.local, created by
+# install.sh and included at the end so it can override anything above.
+
+[core]
+	autocrlf = input          # normalise CRLF to LF on commit; never convert on checkout
+	# Global ignores: ~/.config/git/ignore (git's default path; see git/ignore).
+
+[init]
+	defaultBranch = main
+
+[color]
+	ui = auto
+
+[pull]
+	ff = only                 # never create surprise merge commits on pull
+
+[push]
+	default = current         # push the current branch to a same-named remote branch
+	autoSetupRemote = true    # first push sets upstream; no -u needed
+
+[fetch]
+	prune = true              # drop remote-tracking branches deleted upstream
+
+[rebase]
+	autoStash = true
+
+[diff]
+	algorithm = histogram
+
+[alias]
+	s   = status
+	b   = branch --sort=-committerdate          # most recently used first
+	ds  = diff --staged
+	lg  = log --oneline --graph --decorate -20
+	# Default-branch-aware aliases: `git default [remote]` prints this repo's
+	# default branch — <remote>/HEAD if known, else main/master as a branch on
+	# that remote, else as a local branch — so none of the aliases below
+	# hard-code a branch name. Remote refs are checked before local ones so a
+	# stray local `main` can't mask a remote whose default is `master`.
+	default = "!f() { r=${1:-origin}; b=$(git symbolic-ref --quiet --short refs/remotes/$r/HEAD 2>/dev/null); b=${b#$r/}; if [ -z \"$b\" ]; then for ref in refs/remotes/$r/main refs/remotes/$r/master refs/heads/main refs/heads/master; do if git show-ref --verify --quiet $ref; then b=${ref##*/}; break; fi; done; fi; [ -n \"$b\" ] || { echo 'git default: no main/master found' >&2; return 1; }; echo \"$b\"; }; f"
+	# dm/dms compare against the local default branch, or origin's if there is no local one.
+	dm  = "!d=$(git default) && { git show-ref --verify --quiet refs/heads/$d || d=origin/$d; } && git diff \"$d\""
+	dms = "!d=$(git default) && { git show-ref --verify --quiet refs/heads/$d || d=origin/$d; } && git diff \"$d\" --stat"
+	cmp = "!d=$(git default) && git checkout \"$d\" && git pull"              # back to default branch, up to date
+	# fr rebases onto the freshly fetched origin/<default>, not the local branch
+	# (the old alias fetched, then rebased onto a stale local master).
+	fr  = "!d=$(git default) && git fetch origin \"$d\" && git rebase \"origin/$d\""
+	fru = "!d=$(git default upstream) && git fetch upstream \"$d\" && git rebase \"upstream/$d\""   # same, onto a fork's upstream
+	up  = fr                                                                     # alias for fr
+
+# GitHub over HTTPS authenticates through the gh CLI (`gh auth login`).
+[credential "https://github.com"]
+	helper =
+	helper = !gh auth git-credential
+[credential "https://gist.github.com"]
+	helper =
+	helper = !gh auth git-credential
+
+[include]
+	path = ~/.gitconfig.local

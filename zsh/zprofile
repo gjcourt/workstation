@@ -1,0 +1,11 @@
+# ~/.zprofile — read by LOGIN shells (every new Terminal tab on macOS), before
+# zshrc. Sets up Homebrew and PATH once per session.
+
+# Homebrew: Apple Silicon first, then Intel. Exports PATH, MANPATH, HOMEBREW_*.
+if [[ -x /opt/homebrew/bin/brew ]]; then
+  eval "$(/opt/homebrew/bin/brew shellenv)"
+elif [[ -x /usr/local/bin/brew ]]; then
+  eval "$(/usr/local/bin/brew shellenv)"
+fi
+
+source "$WORKSTATION_DIR/zsh/path.zsh"

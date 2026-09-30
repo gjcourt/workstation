@@ -1,0 +1,38 @@
+# Brewfile.extras — optional (`install.sh --extras`): hardware, media, and
+# one-off tools that a new Mac doesn't need on day one.
+
+# --- hardware & embedded -------------------------------------------------------
+brew "esphome"
+brew "dfu-util"
+brew "hidapi"
+brew "ipmitool"
+brew "mosquitto"
+cask "gcc-arm-embedded"
+cask "openscad"
+
+# --- audio, video, documents -------------------------------------------------
+brew "flac"
+brew "exiftool"
+brew "pandoc"
+brew "poppler"
+brew "tesseract"
+brew "weasyprint"
+brew "whisper.cpp"
+cask "xld"
+cask "vlc"
+
+# --- containers, extra --------------------------------------------------------
+brew "docker"
+brew "docker-buildx"
+brew "docker-compose"
+brew "kind"
+
+# --- everything else -----------------------------------------------------------
+brew "hugo"
+brew "postgresql@18"
+brew "awscli"
+brew "cmake"
+brew "llvm"
+brew "qrencode"
+brew "signal-cli"
+cask "cloudflare-warp"

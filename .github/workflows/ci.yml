@@ -1,0 +1,34 @@
+# Lint everything, then install into a throwaway $HOME on a real macOS runner
+# and check the result (scripts/test-install.sh). The Homebrew step is skipped
+# (--no-brew) to keep CI fast; the Brewfiles are syntax-checked instead.
+name: CI
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  lint-and-test:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false   # nothing here pushes; don't leave a token in .git/config
+      - name: Tools
+        run: brew install shellcheck ruff tmux
+      - name: Lint
+        run: make lint
+      - name: Brewfiles parse
+        run: |
+          for f in Brewfile Brewfile.extras; do
+            brew bundle list --all --file="$f" >/dev/null && echo "ok  $f"
+          done
+      - name: Install into a throwaway HOME
+        run: make test
+      # `bash -s --` is how flags reach a script read from stdin
+      # (`curl … | bash -s -- --dry-run`); a bare `bash --dry-run` is an error.
+      - name: install.sh --dry-run from a pipe (the quick-start path)
+        run: WORKSTATION_DIR="$RUNNER_TEMP/ws" /bin/bash -s -- --dry-run < install.sh

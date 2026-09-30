@@ -1,0 +1,42 @@
+# ~/.bashrc — interactive bash (and, via bash_profile, bash login shells).
+# A deliberately small mirror of the zsh setup: same PATH, same prompt, same
+# everyday aliases. zsh is the primary shell.
+
+export EDITOR=vim VISUAL=vim
+export WORKSTATION_DIR="${WORKSTATION_DIR:-$HOME/src/workstation}"
+
+# Homebrew (Apple Silicon, then Intel).
+for b in /opt/homebrew/bin/brew /usr/local/bin/brew; do
+  [ -x "$b" ] && eval "$("$b" shellenv)" && break
+done
+
+# PATH: same directories as zsh/path.zsh, each only if it exists.
+for d in "$HOME/.foundry/bin" "${KREW_ROOT:-$HOME/.krew}/bin" "$HOME/go/bin" \
+         "$HOME/.local/bin" "$HOME/.bin" "$HOME/bin"; do
+  case ":$PATH:" in *":$d:"*) ;; *) [ -d "$d" ] && PATH="$d:$PATH" ;; esac
+done
+export PATH GOPATH="$HOME/go"
+
+# Everything above is environment, wanted by `bash -l -c …` too. The rest is
+# for interactive shells only.
+case $- in *i*) ;; *) return ;; esac
+
+# Prompt — same look as zsh/prompt.zsh: blue dir, green branch, purple $.
+__git_branch() {
+  local b
+  b=$(git symbolic-ref --short HEAD 2>/dev/null || git rev-parse --short HEAD 2>/dev/null) || return
+  [ -n "$b" ] && printf '%s ' "$b"
+}
+PS1='\[\e[38;5;33m\]\W\[\e[0m\] \[\e[38;5;40m\]$(__git_branch)\[\e[38;5;99m\]\$\[\e[0m\] '
+
+HISTSIZE=50000
+HISTFILESIZE=50000
+HISTCONTROL=ignoreboth:erasedups   # skip duplicates and space-prefixed commands
+shopt -s histappend
+
+alias ..='cd ..' ls='ls -G' ll='ls -lh' la='ls -A' lla='ls -lhA'
+alias grep='grep --color=auto' python='python3'
+
+# Machine-specific settings (not in git).
+# shellcheck source=/dev/null  # machine-local, not in the repo
+[ -f "$HOME/.bashrc.local" ] && . "$HOME/.bashrc.local"

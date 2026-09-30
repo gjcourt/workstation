@@ -1,0 +1,18 @@
+# ~/.zshenv — read by EVERY zsh, including scripts and non-interactive
+# commands. Keep it tiny and side-effect free: environment only, no output,
+# nothing slow. PATH lives in zprofile/path.zsh; interactive setup in zshrc.
+
+export EDITOR=vim
+export VISUAL=vim
+export LANG="${LANG:-en_US.UTF-8}"
+export PYTHONDONTWRITEBYTECODE=1   # no __pycache__ litter in repos
+
+# Where this repo lives, for the files that source their siblings. Found by
+# following the ~/.zshenv symlink back to the checkout (%x = this file, :A =
+# resolve symlinks, :h:h = up from zsh/zshenv to the repo), so a checkout
+# anywhere works; falls back to the default location if that doesn't pan out.
+if [[ -z "${WORKSTATION_DIR:-}" ]]; then
+  WORKSTATION_DIR="${${(%):-%x}:A:h:h}"
+  [[ -f "$WORKSTATION_DIR/zsh/zshrc" ]] || WORKSTATION_DIR="$HOME/src/workstation"
+fi
+export WORKSTATION_DIR
