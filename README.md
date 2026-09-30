@@ -58,6 +58,7 @@ git/               config (identity comes from ~/.gitconfig.local) and the globa
 vim/ tmux/         editor and terminal-multiplexer config
 ssh/               defaults only; hosts live in ~/.ssh/config.local
 macos/defaults.sh  opt-in Finder, keyboard and screenshot settings
+terminal/          the Terminal.app theme (IR_Black-2, Monaco) and its installer — applied with --macos
 bin/               secrets-import: move plaintext secrets into 1Password
 scripts/           test-install.sh: the CI install test
 ```

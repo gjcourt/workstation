@@ -13,7 +13,7 @@
 #   4. Symlink the configs in LINKS below into $HOME, backing up anything
 #      they replace to ~/.workstation-backup/<timestamp>/
 #   5. Create the local, never-committed override files (*.local) if missing
-#   6. With --macos: apply macos/defaults.sh
+#   6. With --macos: apply macos/defaults.sh and the Terminal.app theme
 #
 # Must run on /bin/bash 3.2 (what macOS ships and what `curl | bash` uses), so:
 # no associative arrays, no ${var,,}, no mapfile.
@@ -38,6 +38,7 @@ Usage: install.sh [--dry-run] [--no-brew] [--extras] [--macos]
   --no-brew   skip Homebrew and `brew bundle` (configs only)
   --extras    also install Brewfile.extras (hardware, media, one-off tools)
   --macos     also apply macos/defaults.sh (Finder, keyboard, screenshots)
+              and the Terminal.app theme (terminal/IR_Black-2.terminal)
 EOF
 }
 
@@ -267,6 +268,8 @@ link_all
 if [ "$MACOS" -eq 1 ]; then
   say "Applying macOS defaults"
   run /bin/bash "$WORKSTATION_DIR/macos/defaults.sh"
+  say "Installing the Terminal.app theme"
+  run /bin/bash "$WORKSTATION_DIR/terminal/install-theme.sh"
 fi
 say "Done. Open a new terminal (or: exec zsh -l)."
 [ -d "$BACKUP_DIR" ] && say "Replaced files are in $BACKUP_DIR"
