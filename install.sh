@@ -11,7 +11,10 @@
 #      were piped from curl, then re-run from the checkout
 #   3. Homebrew, then `brew bundle` from Brewfile (+ Brewfile.extras with --extras)
 #   4. Symlink the configs in LINKS below into $HOME, backing up anything
-#      they replace to ~/.workstation-backup/<timestamp>/
+#      they replace to ~/.workstation-backup/<timestamp>/. An existing
+#      ~/.zshrc, ~/.bashrc or ~/.vimrc is also appended to its *.local file,
+#      and an existing ~/.ssh/config becomes ~/.ssh/config.local, so what
+#      you had keeps working.
 #   5. Create the local, never-committed override files (*.local) if missing
 #   6. With --macos: apply macos/defaults.sh and the Terminal.app theme
 #
@@ -200,6 +203,14 @@ link() {
         fi
         ;;
       *)
+        # Configs whose repo version sources a *.local file keep working too:
+        # the old contents are appended to that file before the move.
+        # The rest have no *.local hook (git keeps only your identity), so say
+        # plainly that anything else in them now lives only in the backup.
+        case "$2" in
+          .zshrc | .bashrc | .vimrc) carry_over "$dst" "$dst.local" ;;
+          *) if [ -s "$dst" ]; then warn "Replaced ~/$2 without merging: copy anything you still need from the backup"; fi ;;
+        esac
         run mkdir -p "$(dirname "$BACKUP_DIR/$2")"
         run mv "$dst" "$BACKUP_DIR/$2"
         say "Backed up ~/$2 to $BACKUP_DIR/$2"
@@ -207,6 +218,28 @@ link() {
     esac
   fi
   run ln -s "$src" "$dst"
+}
+
+# carry_over OLD LOCAL — append the contents of an existing config (a file, or
+# a symlink to one, e.g. from an old dotfiles repo) to its *.local override,
+# which the repo's version sources last, so the old settings still apply and
+# win over the defaults. Any line naming LOCAL is commented out: if it sources
+# LOCAL, LOCAL would otherwise source itself forever.
+carry_over() {
+  [ -f "$1" ] && [ -s "$1" ] || return 0 # nothing to keep (or a directory)
+  name="$(basename "$2")"
+  if [ "$DRY_RUN" -eq 1 ]; then
+    say "[dry-run] would append ~/$(basename "$1") to ~/$name"
+    return
+  fi
+  {
+    printf '\n# --- Carried over from your previous ~/%s by install.sh, %s.\n' \
+      "$(basename "$1")" "$(date +%Y-%m-%d)"
+    printf '# --- The original is in %s. Trim what the repo already does.\n' "$BACKUP_DIR"
+    sed "/$(printf '%s' "$name" | sed 's/\./\\./g')/s/^/# [install.sh: would source itself] /" "$1"
+  } >>"$2"
+  chmod 600 "$2"
+  say "Kept your ~/$(basename "$1") settings: appended to ~/$name"
 }
 
 link_all() {

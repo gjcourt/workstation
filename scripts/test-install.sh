@@ -8,8 +8,13 @@ repo="$(cd "$(dirname "$0")/.." && pwd)"
 home="$(mktemp -d)"
 trap 'rm -rf "$home"' EXIT
 
-# A pre-existing config, to prove it's backed up rather than lost.
-printf 'export OLD=1\n' >"$home/.zshrc"
+# Pre-existing configs, to prove they're backed up and carried over, not lost.
+# The .zshrc also sources its own .local file, which must not loop; the .vimrc
+# is a symlink into an "old dotfiles repo", which must still be read.
+printf 'export OLD=1\n[ -f ~/.zshrc.local ] && source ~/.zshrc.local\n' >"$home/.zshrc"
+printf 'export OLD_BASH=1\n' >"$home/.bashrc"
+mkdir -p "$home/old-dotfiles" && printf 'set number\n' >"$home/old-dotfiles/vimrc"
+ln -s "$home/old-dotfiles/vimrc" "$home/.vimrc"
 mkdir -p "$home/.ssh" && printf 'Host old\n  HostName example.invalid\n' >"$home/.ssh/config"
 
 HOME="$home" WORKSTATION_DIR="$repo" /bin/bash "$repo/install.sh" --no-brew
@@ -24,10 +29,15 @@ for pair in zsh/zshrc:.zshrc zsh/zprofile:.zprofile zsh/zshenv:.zshenv bash/bash
   check "HOME/$dst -> $src" "[ \"\$(readlink '$home/$dst')\" = '$repo/$src' ]"
 done
 check "old .zshrc backed up" "grep -q OLD=1 '$home'/.workstation-backup/*/.zshrc"
+check "old .zshrc carried into .zshrc.local" "grep -qx 'export OLD=1' '$home/.zshrc.local'"
+check "self-sourcing line disabled" "grep -q '^# \\[install.sh: would source itself\\] \\[ -f ~/.zshrc.local' '$home/.zshrc.local'"
+check "old .bashrc carried into .bashrc.local" "grep -qx 'export OLD_BASH=1' '$home/.bashrc.local'"
+check "symlinked old .vimrc carried over" "grep -qx 'set number' '$home/.vimrc.local'"
+check "carried-over settings apply in zsh" "[ \"\$(HOME='$home' env -u WORKSTATION_DIR zsh -l -i -c 'echo \$OLD' 2>/dev/null)\" = 1 ]"
 check "old ssh config kept as config.local" "grep -q 'Host old' '$home/.ssh/config.local'"
 check "HOME/.gitconfig.local created" "[ -f '$home/.gitconfig.local' ]"
 check "HOME/.zshrc.local is mode 600" "[ \"\$(stat -f %Lp '$home/.zshrc.local')\" = 600 ]"
-check "second run is a no-op" "HOME='$home' WORKSTATION_DIR='$repo' /bin/bash '$repo/install.sh' --no-brew >/dev/null && [ \$(ls '$home/.workstation-backup' | wc -l) -eq 1 ]"
+check "second run is a no-op" "HOME='$home' WORKSTATION_DIR='$repo' /bin/bash '$repo/install.sh' --no-brew >/dev/null && [ \$(ls '$home/.workstation-backup' | wc -l) -eq 1 ] && [ \$(grep -c 'Carried over' '$home/.zshrc.local') -eq 1 ]"
 
 # The shells must start with no errors on stderr. WORKSTATION_DIR is unset so
 # zshenv has to find the checkout by following the ~/.zshenv symlink.
