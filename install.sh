@@ -11,7 +11,10 @@
 #      were piped from curl, then re-run from the checkout
 #   3. Homebrew, then `brew bundle` from Brewfile (+ Brewfile.extras with --extras)
 #   4. Symlink the configs in LINKS below into $HOME, backing up anything
-#      they replace to ~/.workstation-backup/<timestamp>/
+#      they replace to ~/.workstation-backup/<timestamp>/. An existing
+#      ~/.zshrc, ~/.bashrc or ~/.vimrc is also appended to its *.local file,
+#      and an existing ~/.ssh/config becomes ~/.ssh/config.local, so what
+#      you had keeps working.
 #   5. Create the local, never-committed override files (*.local) if missing
 #   6. With --macos: apply macos/defaults.sh and the Terminal.app theme
 #
@@ -200,6 +203,14 @@ link() {
         fi
         ;;
       *)
+        # Configs whose repo version sources a *.local file keep working too:
+        # the old contents are appended to that file before the move.
+        # The rest have no *.local hook (git keeps only your identity), so say
+        # plainly that anything else in them now lives only in the backup.
+        case "$2" in
+          .zshrc | .bashrc | .vimrc) carry_over "$dst" "$dst.local" ;;
+          *) if [ -s "$dst" ]; then warn "Replaced ~/$2 without merging: copy anything you still need from the backup"; fi ;;
+        esac
         run mkdir -p "$(dirname "$BACKUP_DIR/$2")"
         run mv "$dst" "$BACKUP_DIR/$2"
         say "Backed up ~/$2 to $BACKUP_DIR/$2"
@@ -207,6 +218,59 @@ link() {
     esac
   fi
   run ln -s "$src" "$dst"
+}
+
+# carry_over OLD LOCAL — append the contents of an existing config (a file, or
+# a symlink to one, e.g. from an old dotfiles repo) to its *.local override,
+# which the repo's version sources last, so the old settings still apply and
+# win over the defaults. The old contents are kept verbatim, between a guard
+# and its reset: an old config that sources LOCAL (in any form — a one-liner,
+# an if/fi or if/endif block, a variable) would otherwise make LOCAL source
+# itself forever. On that nested source the guard returns early, so only the
+# part of LOCAL above the block runs twice.
+carry_over() {
+  [ -f "$1" ] && [ -s "$1" ] || return 0 # nothing to keep (or a directory)
+  name="$(basename "$2")"
+  # A symlink into another workstation checkout (the repo was moved or
+  # re-cloned) is this repo's own config, not settings to keep.
+  if [ -L "$1" ]; then
+    target="$(readlink "$1")"
+    case "$target" in /*) ;; *) target="$(dirname "$1")/$target" ;; esac
+    if grep -q 'gjcourt/workstation' "$(dirname "$target")/../install.sh" 2>/dev/null; then
+      say "Not carrying over ~/$(basename "$1"): it was another workstation checkout's"
+      return 0
+    fi
+  fi
+  if [ "$DRY_RUN" -eq 1 ]; then
+    say "[dry-run] would append ~/$(basename "$1") to ~/$name"
+    return 0
+  fi
+  # vim comments start with ", not #; the guard is per file (.zshrc -> zshrc).
+  guard="_workstation_carry_$(basename "$1" | tr -cd '[:alnum:]')"
+  if [ "$name" = .vimrc.local ]; then
+    c='"'
+    open="if exists('g:$guard') | finish | endif | let g:$guard = 1"
+    close="unlet g:$guard"
+  else
+    c='#'
+    open="if [ -n \"\${$guard:-}\" ]; then return 0; fi; $guard=1"
+    close="unset $guard"
+  fi
+  (
+    umask 077 # LOCAL may not exist yet, and the old file may hold secrets
+    {
+      printf '\n%s --- Carried over from your previous ~/%s by install.sh, %s.\n' \
+        "$c" "$(basename "$1")" "$(date +%Y-%m-%d)"
+      printf '%s --- The original is in %s. Trim what the repo already does.\n' "$c" "$BACKUP_DIR"
+      printf '%s\n' "$open"
+      cat "$1"
+      # No trailing newline: don't let the reset join the last old line.
+      if [ -n "$(tail -c 1 "$1")" ]; then echo; fi
+      printf '%s\n%s --- End of your previous ~/%s.\n' "$close" "$c" "$(basename "$1")"
+    } >>"$2"
+  )
+  chmod 600 "$2"
+  say "Kept your ~/$(basename "$1") settings: appended to ~/$name"
 }
 
 link_all() {

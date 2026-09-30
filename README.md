@@ -8,7 +8,7 @@ git, the everyday command-line tools, and secrets from 1Password instead of
 plaintext in dotfiles. Everything is symlinked from this repo, so a change
 here is a change on every machine after a `git pull`.
 
-**Status:** new (2026-09) — CI installs it into a clean `$HOME` on macOS on every change; not yet the live config on any machine.
+**Status:** new (2026-09) — installed on one machine so far; CI installs it into a clean `$HOME` on macOS on every change.
 
 A real run — configs only (`--no-brew`), into a `$HOME` that already had a `.zshrc`:
 
@@ -19,9 +19,10 @@ $ ~/src/workstation/install.sh --no-brew
 ==> Created ~/.gitconfig.local
 ==> Created ~/.ssh/config.local
 ==> Linking configs into ~
-==> Backed up ~/.zshrc to ~/.workstation-backup/20260929-090228-12802/.zshrc
+==> Kept your ~/.zshrc settings: appended to ~/.zshrc.local
+==> Backed up ~/.zshrc to ~/.workstation-backup/20260930-075703-30591/.zshrc
 ==> Done. Open a new terminal (or: exec zsh -l).
-==> Replaced files are in ~/.workstation-backup/20260929-090228-12802
+==> Replaced files are in ~/.workstation-backup/20260930-075703-30591
 ```
 
 ## Quick start
@@ -63,14 +64,24 @@ bin/               secrets-import: move plaintext secrets into 1Password
 scripts/           test-install.sh: the CI install test
 ```
 
-What's **not** in the repo, by design — created empty by `install.sh`, never
+What's **not** in the repo, by design — created by `install.sh`, never
 committed:
 
 | File | For |
 |---|---|
 | `~/.zshrc.local` | machine-specific shell config: hosts, work env, extra PATH |
+| `~/.bashrc.local`, `~/.vimrc.local` | the same for bash and vim |
 | `~/.gitconfig.local` | git identity and signing |
 | `~/.ssh/config.local` | ssh hosts |
+
+Installing over an existing setup keeps it working. Every file `install.sh`
+replaces is backed up to `~/.workstation-backup/<timestamp>/`, and an existing
+`~/.zshrc`, `~/.bashrc` or `~/.vimrc` is also appended to its `.local` file —
+loaded last, so your old settings still apply and win over the defaults. An
+existing `~/.ssh/config` becomes `~/.ssh/config.local`, and git keeps your name
+and email. Other replaced files (`~/.zprofile`, `~/.zshenv`, `~/.bash_profile`,
+`~/.tmux.conf`, the rest of `~/.gitconfig`) aren't merged; `install.sh` warns
+about each, and they're in the backup.
 | `~/.config/workstation/secrets.env` | which 1Password item holds each secret (no values) |
 
 ### Secrets
@@ -86,9 +97,10 @@ secrets-list                  # what's mapped (names only)
 ```
 
 Moving an existing setup over: `bin/secrets-import --dry-run` lists the
-`export NAME=value` secrets in `~/.zshrc`; without `--dry-run` it stores each in
-1Password and writes the map. Then delete the plaintext lines — and the
-backup `install.sh` made of your old `~/.zshrc`, which still has them.
+`export NAME=value` secrets in `~/.zshrc` (or in `~/.zshrc.local`, once
+`install.sh` has carried your old `~/.zshrc` into it); without `--dry-run` it
+stores each in 1Password and writes the map. Then delete the plaintext lines —
+and the backup `install.sh` made of your old `~/.zshrc`, which still has them.
 
 ## Making a change
 
