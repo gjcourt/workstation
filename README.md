@@ -96,6 +96,21 @@ secret GHCR_TOKEN | pbcopy    # print one
 secrets-list                  # what's mapped (names only)
 ```
 
+Some secrets are **files** rather than values (a git-crypt key, an API key file a
+tool reads from `~/.config`). `zsh/keyfiles.zsh` keeps those at
+`~/.config/<app>/<file>` and mirrors each to a 1Password document titled
+`secret:<app>/<file>`:
+
+```bash
+keyfile-save git-crypt team.key   # store or update one file
+keyfile-get  git-crypt team.key   # restore it (permissions 600)
+keyfile-sync                      # re-store every tracked file that changed
+keyfile-restore                   # restore everything on a new machine
+keyfile-list                      # what's stored (names only)
+```
+
+Set `OP_ACCOUNT` and `KEYFILES_VAULT` in `~/.zshrc.local`.
+
 Moving an existing setup over: `bin/secrets-import --dry-run` lists the
 `export NAME=value` secrets in `~/.zshrc` (or in `~/.zshrc.local`, once
 `install.sh` has carried your old `~/.zshrc` into it); without `--dry-run` it

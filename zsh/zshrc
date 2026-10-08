@@ -21,7 +21,7 @@ setopt NO_BEEP
 
 # --- modules -----------------------------------------------------------------
 
-for f in prompt aliases completion secrets; do
+for f in prompt aliases completion secrets keyfiles; do
   source "$WORKSTATION_DIR/zsh/$f.zsh"
 done
 unset f
